@@ -1,0 +1,19 @@
+daemon - This is a daemon app for HUST RaidManager system
+	 to refresh the network and raid configuration files
+
+Files Included:
+---------------
+Makefile
+
+daemon.cpp
+
+disk.h
+
+diskArray.h
+
+global.h
+
+raidConfig.h
+
+singleRaid.h
+---------------
