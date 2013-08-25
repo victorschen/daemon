@@ -7,16 +7,13 @@
 #include<sys/types.h>
 #include<sys/stat.h>
 #include<time.h>
-#include <libxml/xmlmemory.h>
-#include <libxml/parser.h>
-#include <libxml/tree.h>
 #include "disk.h"
 #include "diskArray.h"
 #include "singleRaid.h"
 #include "raidConfig.h"
 #include "global.h"
 
-// 记录Raid状态的数组,在WriteLog时用到
+// 锟斤拷录Raid状态锟斤拷锟斤拷锟斤拷,锟斤拷WriteLog时锟矫碉拷
 int raidStat[32];
 
 void init_daemon(void)
@@ -96,44 +93,44 @@ void printDaToFile(char * fileName,DiskArray& da)
 	fclose(fp);
 }
 
-// 磁盘监控模块
+// 锟斤拷锟教硷拷锟斤拷模锟斤拷
 void DiskMonitor(DiskArray& da,RaidConfig& rc)
 {
-	// 首先刷新da中的磁盘状态
+	// 锟斤拷锟斤拷刷锟斤拷da锟叫的达拷锟斤拷状态
 	chdir(workingDir);
 	da.refreshArray();
-	da.scanForNewDevice();  // 扫描新插入的磁盘
+	da.scanForNewDevice();  // 扫锟斤拷锟铰诧拷锟斤拷锟侥达拷锟斤拷
 	for(int i = 0;i < da.diskNum;i++)
 	{
-		int isNewDisk = 1;  // 标志磁盘是否为新设备
-		// 将磁盘与非阵列下的磁盘对比
+		int isNewDisk = 1;  // 锟斤拷志锟斤拷锟斤拷锟角凤拷为锟斤拷锟借备
+		// 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟铰的达拷锟教对憋拷
 		for(int j = 0;j < rc.diskNum;j++)
 		{
 			if(da.array[i] == rc.disks[j])
 			{
 				strcpy(rc.disks[j].status,da.array[i].status);
 				isNewDisk = 0;
-				// 如果有磁盘状态不正常时的处理
+				// 锟斤拷锟斤拷锟叫达拷锟斤拷状态锟斤拷锟斤拷锟斤拷时锟侥达拷锟斤拷
 				if(!strcmp(rc.disks[j].status,"2"))
 				{
-					da.removeDiskAt(i);  // 将坏的磁盘从da对象中移出
+					da.removeDiskAt(i);  // 锟斤拷锟斤拷锟侥达拷锟教达拷da锟斤拷锟斤拷锟斤拷锟狡筹拷
 					FILE * fp = fopen("broken_disk_evulsion_event","w");
 					fclose(fp);
 				}
 				break;
 			}
 		}
-		// 将磁盘与阵列下的磁盘对比
+		// 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟铰的达拷锟教对憋拷
 		for(int j = 0;j < rc.singleRaidNum;j++)
 		{
-			// 对比阵列盘组
+			// 锟皆憋拷锟斤拷锟斤拷锟斤拷锟斤拷
 			for(int k = 0;k < rc.singleRaids[j].raidDiskNum;k++)
 			{
 				if(da.array[i] == rc.singleRaids[j].raidDisks[k])
 				{
 					strcpy(rc.singleRaids[j].raidDisks[k].status,da.array[i].status);
 					isNewDisk = 0;
-					// 如果磁盘状态不正常时的处理
+					// 锟斤拷锟斤拷锟斤拷锟斤拷状态锟斤拷锟斤拷锟斤拷时锟侥达拷锟斤拷
 					if(!strcmp(rc.singleRaids[j].raidDisks[k].status,"2"))
 					{
 						FILE * fp = fopen("broken_disk_evulsion_event","w");
@@ -142,14 +139,14 @@ void DiskMonitor(DiskArray& da,RaidConfig& rc)
 					break;
 				}
 			}
-			// 对比备份盘组
+			// 锟皆比憋拷锟斤拷锟斤拷锟斤拷
 			for(int k = 0;k < rc.singleRaids[j].spareDiskNum;k++)
 			{
 				if(rc.singleRaids[j].spareDisks[k] == da.array[i])
 				{
 					strcpy(rc.singleRaids[j].spareDisks[k].status,da.array[i].status);
 					isNewDisk = 0;
-					// 如果磁盘状态不正常时的处理
+					// 锟斤拷锟斤拷锟斤拷锟斤拷状态锟斤拷锟斤拷锟斤拷时锟侥达拷锟斤拷
 					if(!strcmp(rc.singleRaids[j].spareDisks[k].status,"2"))
 					{
 						FILE * fp = fopen("broken_disk_evulsion_event","w");
@@ -159,22 +156,22 @@ void DiskMonitor(DiskArray& da,RaidConfig& rc)
 				}
 			}
 		}
-		// 没有在阵列中发现该磁盘，说明是新添加的设备
+		// 没锟斤拷锟斤拷锟斤拷锟斤拷锟叫凤拷锟街该达拷锟教ｏ拷说锟斤拷锟斤拷锟斤拷锟斤拷锟接碉拷锟借备
 		if(isNewDisk)
 		{
 			rc.addDisk(da.array[i]);
-			// 创建标志文件
+			// 锟斤拷锟斤拷锟斤拷志锟侥硷拷
 			FILE * fp = fopen("new_disk_insertion_event","w");
 			fclose(fp);
 		}
 	}
-	// 重新生成xml文件
+	// 锟斤拷锟斤拷锟斤拷锟斤拷xml锟侥硷拷
 	if(!access("raidConfigt.xml",0))
 		system("rm -f raidConfigt.xml");
 	rc.saveRcToXml("raidConfigt.xml");
 }
 
-// 阵列配置更新模块
+// 锟斤拷锟斤拷锟斤拷锟矫革拷锟斤拷模锟斤拷
 void RaidMonitor(RaidConfig& rc)
 {
 	chdir(workingDir);
@@ -183,7 +180,7 @@ void RaidMonitor(RaidConfig& rc)
 		RaidConfig rc1;
 		rc1.buildRcFromXml("raidConfigNew.xml");
 		printRcToFile("rc1",rc1);
-		// 判断是否有新阵列创建
+		// 锟叫讹拷锟角凤拷锟斤拷锟斤拷锟斤拷锟叫达拷锟斤拷
 	    for(int i = 0;i < rc1.singleRaidNum;i++)
 	    {
 	    	if(rc.getSingleRaidIndex(rc1.singleRaids[i]) == -1)
@@ -192,36 +189,36 @@ void RaidMonitor(RaidConfig& rc)
 	    		rc1.singleRaids[i].create();
 	    	}
 	    }
-		// 判断是否有阵列被删除
+		// 锟叫讹拷锟角凤拷锟斤拷锟斤拷锟叫憋拷删锟斤拷
 		for(int i = 0;i < rc.singleRaidNum;i++)
 		{
 			if(rc1.getSingleRaidIndex(rc.singleRaids[i]) == -1)
 			{
 				rc.singleRaids[i].stop();
-				// 如果此阵列的映射通道号为0则删除标志文件
+				// 锟斤拷锟斤拷锟斤拷锟斤拷锟叫碉拷映锟斤拷通锟斤拷锟斤拷为0锟斤拷删锟斤拷锟斤拷志锟侥硷拷
 				if(!strcmp(rc.singleRaids[i].mappingNo,"0"))
 					system("rm -f mappingFlag");
 				rc.removeSingleRaid(rc.singleRaids[i]);
-				// 记下被删除的阵列的序号
+				// 锟斤拷锟铰憋拷删锟斤拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷
 				FILE * fp = fopen("RemovedRaids","a");
 				fputs(rc.singleRaids[i].index,fp);
 				fputs("\n",fp);
 				fclose(fp);
 			}
 		}
-		// 判断各阵列下的磁盘配置是否被修改
+		// 锟叫断革拷锟斤拷锟斤拷锟铰的达拷锟斤拷锟斤拷锟斤拷锟角凤拷锟斤拷锟睫革拷
 		for(int i = 0;i < rc.singleRaidNum;i++)
 		{
 			int j = rc1.getSingleRaidIndex(rc.singleRaids[i]);
 			if(j != -1)
 			{
-				// 检查是否有磁盘移出
+				// 锟斤拷锟斤拷锟角凤拷锟叫达拷锟斤拷锟狡筹拷
 				for(int k = 0;k < rc.singleRaids[i].raidDiskNum;k++)
 				{
 					if(rc1.singleRaids[j].getRaidDiskIndex(rc.singleRaids[i].raidDisks[k]) == -1)
 					{
 						rc.singleRaids[i].hotRemoveDisk(rc.singleRaids[i].raidDisks[k]);
-						k--;  // 移出了一个Disk，后面的Disk都向前移了一个
+						k--;  // 锟狡筹拷锟斤拷一锟斤拷Disk锟斤拷锟斤拷锟斤拷锟斤拷Disk锟斤拷锟斤拷前锟斤拷锟斤拷一锟斤拷
 					}
 				}
 				for(int k = 0;k < rc.singleRaids[i].spareDiskNum;k++)
@@ -229,10 +226,10 @@ void RaidMonitor(RaidConfig& rc)
 					if(rc1.singleRaids[j].getSpareDiskIndex(rc.singleRaids[i].spareDisks[k]) == -1)
 					{
 						rc.singleRaids[i].hotRemoveDisk(rc.singleRaids[i].spareDisks[k]);
-						k--;  // 移出了一个Disk，后面的Disk都向前移了一个
+						k--;  // 锟狡筹拷锟斤拷一锟斤拷Disk锟斤拷锟斤拷锟斤拷锟斤拷Disk锟斤拷锟斤拷前锟斤拷锟斤拷一锟斤拷
 					}
 				}
-				// 检查是否有新盘加入
+				// 锟斤拷锟斤拷锟角凤拷锟斤拷锟斤拷锟教硷拷锟斤拷
 				for(int k = 0;k < rc1.singleRaids[j].raidDiskNum;k++)
 				{
 					if(rc.singleRaids[i].getRaidDiskIndex(rc1.singleRaids[j].raidDisks[k]) == -1)
@@ -249,7 +246,7 @@ void RaidMonitor(RaidConfig& rc)
 				}
 			}
 		}
-		// 检查空闲磁盘组
+		// 锟斤拷锟斤拷锟斤拷锟叫达拷锟斤拷锟斤拷
 		for(int i = 0;i < rc.diskNum;i++)
 		{
 			if(rc1.getDiskIndex(rc.disks[i]) == -1)
@@ -265,7 +262,7 @@ void RaidMonitor(RaidConfig& rc)
 				rc.addDisk(rc1.disks[i]);
 			}
 		}
-		// 重新生成xml文件
+		// 锟斤拷锟斤拷锟斤拷锟斤拷xml锟侥硷拷
 		system("rm -f raidConfigNew.xml");
 		if(!access("raidConfigt.xml",0))
 			system("rm -f raidConfigt.xml");
@@ -275,7 +272,7 @@ void RaidMonitor(RaidConfig& rc)
 	}
 }
 
-// 写系统日志模块
+// 写系统锟斤拷志模锟斤拷
 void WriteLog()
 {
 	int i,nLines;
@@ -284,27 +281,27 @@ void WriteLog()
 	FILE * fp1, * fp2, * fp3, * fp4;
 	char buffer1[100],buffer2[100],buffer3[100],buffer4[100],temp[100];
 	chdir(workingDir);
-	/* 查看是否有log文件，如果没有则创建它 */
+	/* 锟介看锟角凤拷锟斤拷log锟侥硷拷锟斤拷锟斤拷锟斤拷没锟斤拷锟津创斤拷锟斤拷 */
 	if(access("log",0))
 	{
 		fp1 = fopen("log","w");
 		fclose(fp1);
 	}
-	/* 看是否有新的磁盘插入 */
+	/* 锟斤拷锟角凤拷锟斤拷锟铰的达拷锟教诧拷锟斤拷 */
 	if(!access("new_disk_insertion_event",0))
 	{
 		system("rm -f new_disk_insertion_event");
 		system("mv log log1");
-		fp1 = fopen("log","w");  /* 创建一个新的日志文件 */
-		fp2 = fopen("log1","r");  /* 打开原来的日志文件 */
-		/* 先记下事件发生的时间 */
+		fp1 = fopen("log","w");  /* 锟斤拷锟斤拷一锟斤拷锟铰碉拷锟斤拷志锟侥硷拷 */
+		fp2 = fopen("log1","r");  /* 锟斤拷锟斤拷原锟斤拷锟斤拷锟斤拷志锟侥硷拷 */
+		/* 锟饺硷拷锟斤拷锟铰硷拷锟斤拷锟斤拷锟斤拷时锟斤拷 */
 		time(&t);
 		p = localtime(&t);
 		fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 		fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
-		/* 将有新磁盘插入这一事件记录入系统日志 */
-		fputs("DISKADD|有新的磁盘插入，请刷新网页显示\n",fp1);
-		/* 将以前的日志事件写回到新日志中[总条数控制在200条以内] */
+		/* 锟斤拷锟斤拷锟铰达拷锟教诧拷锟斤拷锟斤拷一锟铰硷拷锟斤拷录锟斤拷系统锟斤拷志 */
+		fputs("DISKADD|锟斤拷锟铰的达拷锟教诧拷锟诫，锟斤拷刷锟斤拷锟斤拷页锟斤拷示\n",fp1);
+		/* 锟斤拷锟斤拷前锟斤拷锟斤拷志锟铰硷拷写锟截碉拷锟斤拷锟斤拷志锟斤拷[锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷200锟斤拷锟斤拷锟斤拷] */
 		nLines = 0;
 		while(fgets(buffer2,100,fp2) != NULL)
 		{
@@ -315,24 +312,24 @@ void WriteLog()
 		}
 		fclose(fp2);
 		fclose(fp1);
-		/* 删除原来的日志文件 */
+		/* 删锟斤拷原锟斤拷锟斤拷锟斤拷志锟侥硷拷 */
 		system("rm -f log1");
 	}
-	/* 看是否有坏的磁盘损坏或拔出 */
+	/* 锟斤拷锟角凤拷锟叫伙拷锟侥达拷锟斤拷锟金坏伙拷锟轿筹拷 */
 	if(!access("broken_disk_evulsion_event",0))
 	{
 		system("rm -f broken_disk_evulsion_event");
 		system("mv log log1");
-		fp1 = fopen("log","w");  /* 创建一个新的日志文件 */
-		fp2 = fopen("log1","r");  /* 打开原来的日志文件 */
-		/* 先记下事件发生的时间 */
+		fp1 = fopen("log","w");  /* 锟斤拷锟斤拷一锟斤拷锟铰碉拷锟斤拷志锟侥硷拷 */
+		fp2 = fopen("log1","r");  /* 锟斤拷锟斤拷原锟斤拷锟斤拷锟斤拷志锟侥硷拷 */
+		/* 锟饺硷拷锟斤拷锟铰硷拷锟斤拷锟斤拷锟斤拷时锟斤拷 */
 		time(&t);
 		p = localtime(&t);
 		fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 		fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
-		/* 将有新磁盘插入这一事件记录入系统日志 */
-		fputs("DISKFAULTY|有磁盘损坏或拔出,请刷新网页显示\n",fp1);
-		/* 将以前的日志事件写回到新日志中[总条数控制在200条以内] */
+		/* 锟斤拷锟斤拷锟铰达拷锟教诧拷锟斤拷锟斤拷一锟铰硷拷锟斤拷录锟斤拷系统锟斤拷志 */
+		fputs("DISKFAULTY|锟叫达拷锟斤拷锟金坏伙拷锟轿筹拷,锟斤拷刷锟斤拷锟斤拷页锟斤拷示\n",fp1);
+		/* 锟斤拷锟斤拷前锟斤拷锟斤拷志锟铰硷拷写锟截碉拷锟斤拷锟斤拷志锟斤拷[锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷200锟斤拷锟斤拷锟斤拷] */
 		nLines = 0;
 		while(fgets(buffer2,100,fp2) != NULL)
 		{
@@ -343,27 +340,27 @@ void WriteLog()
 		}
 		fclose(fp2);
 		fclose(fp1);
-		/* 删除原来的日志文件 */
+		/* 删锟斤拷原锟斤拷锟斤拷锟斤拷志锟侥硷拷 */
 		system("rm -f log1");
 	}
-	/* 查看是否有阵列删除 */
+	/* 锟介看锟角凤拷锟斤拷锟斤拷锟斤拷删锟斤拷 */
 	if(!access("RemovedRaids",0))
 	{
 		fp4 = fopen("RemovedRaids","r");
 		while(fgets(buffer4,100,fp4) != NULL)
 		{
 			system("mv log log1");
-			fp1 = fopen("log","w");  /* 创建一个新的日志文件 */
-			fp2 = fopen("log1","r");  /* 打开原来的日志文件 */
-			/* 先记下事件发生的时间 */
+			fp1 = fopen("log","w");  /* 锟斤拷锟斤拷一锟斤拷锟铰碉拷锟斤拷志锟侥硷拷 */
+			fp2 = fopen("log1","r");  /* 锟斤拷锟斤拷原锟斤拷锟斤拷锟斤拷志锟侥硷拷 */
+			/* 锟饺硷拷锟斤拷锟铰硷拷锟斤拷锟斤拷锟斤拷时锟斤拷 */
 			time(&t);
 			p = localtime(&t);
 			fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 			fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
-			/* 将有阵列被删除这一事件记录入系统日志 */
-			fputs("DISKFAULTY|有阵列被删除，序号为：",fp1);
+			/* 锟斤拷锟斤拷锟斤拷锟叫憋拷删锟斤拷锟斤拷一锟铰硷拷锟斤拷录锟斤拷系统锟斤拷志 */
+			fputs("DISKFAULTY|锟斤拷锟斤拷锟叫憋拷删锟斤拷锟斤拷锟斤拷锟斤拷为锟斤拷",fp1);
 			fputs(buffer4,fp1);
-			/* 将以前的日志事件写回到新日志中[总条数控制在200条以内] */
+			/* 锟斤拷锟斤拷前锟斤拷锟斤拷志锟铰硷拷写锟截碉拷锟斤拷锟斤拷志锟斤拷[锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷200锟斤拷锟斤拷锟斤拷] */
 			nLines = 0;
 			while(fgets(buffer2,100,fp2) != NULL)
 			{
@@ -374,166 +371,166 @@ void WriteLog()
 			}
 			fclose(fp2);
 			fclose(fp1);
-			/* 删除原来的日志文件 */
+			/* 删锟斤拷原锟斤拷锟斤拷锟斤拷志锟侥硷拷 */
 			system("rm -f log1");
 		}
 		fclose(fp4);
-		/* 删除临时文件 */
+		/* 删锟斤拷锟斤拷时锟侥硷拷 */
 		system("rm -f RemovedRaids");
 	}
-	/* 查看/proc/mdstat文件，监控磁盘阵列的运行状态 */
+	/* 锟介看/proc/mdstat锟侥硷拷锟斤拷锟斤拷锟截达拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷状态 */
 	system("mv log log1");
-	fp1 = fopen("log","w");  /* 创建一个新的日志文件 */
+	fp1 = fopen("log","w");  /* 锟斤拷锟斤拷一锟斤拷锟铰碉拷锟斤拷志锟侥硷拷 */
 	//fp3 = fopen("/proc/raidstat","r");
 	fp3 = fopen("/proc/mdstat","r");
 	nLines = 0;
-	while(fgets(buffer3,100,fp3) != NULL)                                                                 //问题所在
+	while(fgets(buffer3,100,fp3) != NULL)                                                                 //锟斤拷锟斤拷锟斤拷锟斤拷
 	{
-		if(strncmp(buffer3,"md",2))  /* 找到记录md信息的起始行 */
+		if(strncmp(buffer3,"md",2))  /* 锟揭碉拷锟斤拷录md锟斤拷息锟斤拷锟斤拷始锟斤拷 */
 			continue;
-		i = atoi(buffer3 + 2);  /* i为阵列的序号 */
-		if(strstr(buffer3 + 13,"raid0") != NULL)  /* 如果阵列是raid0级别 */
+		i = atoi(buffer3 + 2);  /* i为锟斤拷锟叫碉拷锟斤拷锟斤拷 */
+		if(strstr(buffer3 + 13,"raid0") != NULL)  /* 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷raid0锟斤拷锟斤拷 */
 		{
-			if(strstr(buffer3,"(F)") != NULL)  /* raid0阵列中有磁盘损坏 */
+			if(strstr(buffer3,"(F)") != NULL)  /* raid0锟斤拷锟斤拷锟斤拷锟叫达拷锟斤拷锟斤拷锟斤拷 */
 			{
 				if(raidStat[i] == 1)
-					continue;  /* 说明上次已经报告了阵列的损坏状态，此次不用重复 */
+					continue;  /* 说锟斤拷锟较达拷锟窖撅拷锟斤拷锟斤拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷状态锟斤拷锟剿次诧拷锟斤拷锟截革拷 */
 				else
 				{
-					/* 先写入日志时间 */
+					/* 锟斤拷写锟斤拷锟斤拷志时锟斤拷 */
 					time(&t);
 					p = localtime(&t);
 					fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 					fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
-					strcpy(buffer1,"RAIDSTATUS|阵列");
-					strncat(buffer1,buffer3 + 2,2);  // 加上阵列的序号
-					strcat(buffer1,":有磁盘损坏或拔出，raid0阵列被损坏\n");
+					strcpy(buffer1,"RAIDSTATUS|锟斤拷锟斤拷");
+					strncat(buffer1,buffer3 + 2,2);  // 锟斤拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷
+					strcat(buffer1,":锟叫达拷锟斤拷锟金坏伙拷锟轿筹拷锟斤拷raid0锟斤拷锟叫憋拷锟斤拷锟斤拷\n");
 					fputs(buffer1,fp1);
 					nLines ++;
 					raidStat[i] = 1;
 				}
 			}
-			else  /* raid0阵列处于正常工作状态 */
+			else  /* raid0锟斤拷锟叫达拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷状态 */
 			{
 				if(raidStat[i] == 0)
-					continue;  /* 说明上次已经报告了阵列的正常状态，此次不用重复 */
+					continue;  /* 说锟斤拷锟较达拷锟窖撅拷锟斤拷锟斤拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷状态锟斤拷锟剿次诧拷锟斤拷锟截革拷 */
 				else
 				{
-					/* 先写入日志时间 */
+					/* 锟斤拷写锟斤拷锟斤拷志时锟斤拷 */
 					time(&t);
 					p = localtime(&t);
 					fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 					fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
-					strcpy(buffer1,"RAIDSTATUS|阵列");
-					strncat(buffer1,buffer3 + 2,2);   // 加上阵列的序号
-					strcat(buffer1,":状态正常\n");
+					strcpy(buffer1,"RAIDSTATUS|锟斤拷锟斤拷");
+					strncat(buffer1,buffer3 + 2,2);   // 锟斤拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷
+					strcat(buffer1,":状态锟斤拷锟斤拷\n");
 					fputs(buffer1,fp1);
 					nLines ++;
 					raidStat[i] = 0;
 				}
 			}
 		}
-		else  /* 阵列非raid0级别[为raid1或raid5等] */
+		else  /* 锟斤拷锟叫凤拷raid0锟斤拷锟斤拷[为raid1锟斤拷raid5锟斤拷] */
 		{
-			strcpy(temp,buffer3);  /* 保存buffer3的内容到temp中，主要为保存raid的序号 */
+			strcpy(temp,buffer3);  /* 锟斤拷锟斤拷buffer3锟斤拷锟斤拷锟捷碉拷temp锟叫ｏ拷锟斤拷要为锟斤拷锟斤拷raid锟斤拷锟斤拷锟斤拷 */
 			fgets(buffer3,100,fp3);
-			if(strstr(buffer3,"_") != NULL)  /* 有磁盘状态不正常，阵列处于降级或重建模式 */
+			if(strstr(buffer3,"_") != NULL)  /* 锟叫达拷锟斤拷状态锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟叫达拷锟节斤拷锟斤拷锟斤拷锟截斤拷模式 */
 			{
 				fgets(buffer3,100,fp3);
-				if(strstr(buffer3,"recovery") != NULL)  /* 阵列正在重建 */
+				if(strstr(buffer3,"recovery") != NULL)  /* 锟斤拷锟斤拷锟斤拷锟斤拷锟截斤拷 */
 				{
 					if(((raidStat[i] % 2) == 0) && (raidStat[i] >= 2) && (raidStat[i] < 24))
 					{
 						raidStat[i] = raidStat[i] + 2;
 						continue;
 					}
-					/* 将raid重建的进度写入日志 */
+					/* 锟斤拷raid锟截斤拷锟侥斤拷锟斤拷写锟斤拷锟斤拷志 */
 					time(&t);
 					p = localtime(&t);
 					fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 					fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
-					strcpy(buffer1,"RAIDSTATUS|阵列");
-					strncat(buffer1,temp + 2,2);  // 加上阵列的序号
-					strcat(buffer1,":正在重建 进度:");
+					strcpy(buffer1,"RAIDSTATUS|锟斤拷锟斤拷");
+					strncat(buffer1,temp + 2,2);  // 锟斤拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷
+					strcat(buffer1,":锟斤拷锟斤拷锟截斤拷 锟斤拷锟斤拷:");
 					strncat(buffer1,strstr(buffer3,"recovery = ") + 11,5);
-					strcat(buffer1," 剩余时间:");
+					strcat(buffer1," 剩锟斤拷时锟斤拷:");
 					strncat(buffer1,strstr(buffer3,"finish=") + 7,strstr(buffer3,"min") - strstr(buffer3,"finish=") - 7);
-					strcat(buffer1,"分\n");
+					strcat(buffer1,"锟斤拷\n");
 					fputs(buffer1,fp1);
 					nLines ++;
 					raidStat[i] = 2;
 				}
-				else  /* 阵列处于降级模式 */
+				else  /* 锟斤拷锟叫达拷锟节斤拷锟斤拷模式 */
 				{
 					if(raidStat[i] == 1)
 						continue;
 					else
 					{
-						/* 先写入日志时间 */
+						/* 锟斤拷写锟斤拷锟斤拷志时锟斤拷 */
 						time(&t);
 						p = localtime(&t);
 						fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 						fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
-						strcpy(buffer1,"RAIDSTATUS|阵列");
-						strncat(buffer1,temp + 2,2);  // 加上阵列的序号
-						strcat(buffer1,":处于降级模式\n");
+						strcpy(buffer1,"RAIDSTATUS|锟斤拷锟斤拷");
+						strncat(buffer1,temp + 2,2);  // 锟斤拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷
+						strcat(buffer1,":锟斤拷锟节斤拷锟斤拷模式\n");
 						fputs(buffer1,fp1);
 						nLines ++;
-						raidStat[i] = 1;  /* 在数组中记下raid的当前降级状态 */
+						raidStat[i] = 1;  /* 锟斤拷锟斤拷锟斤拷锟叫硷拷锟斤拷raid锟侥碉拷前锟斤拷锟斤拷状态 */
 					}
 				}
 			}
-			else  /* 阵列处于正常工作状态或正在同步 */
+			else  /* 锟斤拷锟叫达拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷状态锟斤拷锟斤拷锟斤拷同锟斤拷 */
 			{
 				fgets(buffer3,100,fp3);
-				if(strstr(buffer3,"resync") != NULL)  /* 阵列正在执行同步操作 */
+				if(strstr(buffer3,"resync") != NULL)  /* 锟斤拷锟斤拷锟斤拷锟斤拷执锟斤拷同锟斤拷锟斤拷锟斤拷 */
 				{
 					if(((raidStat[i] % 2) == 1) && (raidStat[i] >= 3) && (raidStat[i] < 25))
 					{
 						raidStat[i] = raidStat[i] + 2;
 						continue;
 					}
-					/* 将raid同步的进度写入日志 */
+					/* 锟斤拷raid同锟斤拷锟侥斤拷锟斤拷写锟斤拷锟斤拷志 */
 					time(&t);
 					p = localtime(&t);
 					fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 					fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
-					strcpy(buffer1,"RAIDSTATUS|阵列");
-					strncat(buffer1,temp + 2,2);  // 加上阵列的序号
-					strcat(buffer1,":正在同步 进度:");
+					strcpy(buffer1,"RAIDSTATUS|锟斤拷锟斤拷");
+					strncat(buffer1,temp + 2,2);  // 锟斤拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷
+					strcat(buffer1,":锟斤拷锟斤拷同锟斤拷 锟斤拷锟斤拷:");
 					strncat(buffer1,strstr(buffer3,"resync = ") + 9,5);
-					strcat(buffer1," 剩余时间:");
+					strcat(buffer1," 剩锟斤拷时锟斤拷:");
 					strncat(buffer1,strstr(buffer3,"finish=") + 7,strstr(buffer3,"min") - strstr(buffer3,"finish=") - 7);
-					strcat(buffer1,"分\n");
+					strcat(buffer1,"锟斤拷\n");
 					fputs(buffer1,fp1);
 					nLines ++;
 					raidStat[i] = 3;
 				}
-				else  /* 阵列处于正常工作状态 */
+				else  /* 锟斤拷锟叫达拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷状态 */
 				{
 					if(raidStat[i] == 0)
 						continue;
 					else
 					{
-						/* 先写入日志时间 */
+						/* 锟斤拷写锟斤拷锟斤拷志时锟斤拷 */
 						time(&t);
 						p = localtime(&t);
 						fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 						fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
-						strcpy(buffer1,"RAIDSTATUS|阵列");
-						strncat(buffer1,temp + 2,2);  // 加上阵列的序号
-						strcat(buffer1,":处于正常状态\n");
+						strcpy(buffer1,"RAIDSTATUS|锟斤拷锟斤拷");
+						strncat(buffer1,temp + 2,2);  // 锟斤拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷
+						strcat(buffer1,":锟斤拷锟斤拷锟斤拷锟斤拷状态\n");
 						fputs(buffer1,fp1);
 						nLines ++;
-						raidStat[i] = 0;  /* 在数组中记下raid的当前正常状态 */
+						raidStat[i] = 0;  /* 锟斤拷锟斤拷锟斤拷锟叫硷拷锟斤拷raid锟侥碉拷前锟斤拷锟斤拷状态 */
 					}
 				}
 			}
 		}
 	}
-	fclose(fp3);  /* 关闭/proc/mdstat文件 */
-	/* 将以前的日志事件写回到新日志中[总条数控制在200条以内] */
-	fp2 = fopen("log1","r");  /* 打开原来的日志文件 */
+	fclose(fp3);  /* 锟截憋拷/proc/mdstat锟侥硷拷 */
+	/* 锟斤拷锟斤拷前锟斤拷锟斤拷志锟铰硷拷写锟截碉拷锟斤拷锟斤拷志锟斤拷[锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷200锟斤拷锟斤拷锟斤拷] */
+	fp2 = fopen("log1","r");  /* 锟斤拷锟斤拷原锟斤拷锟斤拷锟斤拷志锟侥硷拷 */
 	while(fgets(buffer2,100,fp2) != NULL)
 	{
 		fputs(buffer2,fp1);
@@ -543,17 +540,17 @@ void WriteLog()
 	}
 	fclose(fp2);
 	fclose(fp1);
-	/* 删掉原来的日志文件 */
+	/* 删锟斤拷原锟斤拷锟斤拷锟斤拷志锟侥硷拷 */
 	system("rm -f log1");
 }
 
-// 其他功能模块，重启监控和修改IP等
+// 锟斤拷锟斤拷锟斤拷锟斤拷模锟介，锟斤拷锟斤拷锟斤拷锟截猴拷锟睫革拷IP锟斤拷
 void Additional(RaidConfig& rc)
 {
 	FILE * fp1;
 	char buffer1[100],cmdline1[200],cmdline2[200];
 	chdir(workingDir);
-	// 修改网络IP地址和DNS
+	// 锟睫革拷锟斤拷锟斤拷IP锟斤拷址锟斤拷DNS
 	if(!access("modify-eth",0))
 	{
 		system("/home/hustraid-init ifg-eth");
@@ -567,16 +564,16 @@ void Additional(RaidConfig& rc)
 		{
 			if(strncmp(buffer1,"IPADDR",6))
 				continue;
-			strncat(cmdline1,buffer1 + 7,strlen(buffer1) - 8);  // 读取IP地址 
+			strncat(cmdline1,buffer1 + 7,strlen(buffer1) - 8);  // 锟斤拷取IP锟斤拷址 
 			strcat(cmdline1," netmask ");
-			fgets(buffer1,100,fp1);  // 读取子网掩码 
+			fgets(buffer1,100,fp1);  // 锟斤拷取锟斤拷锟斤拷锟斤拷锟斤拷 
 			strncat(cmdline1,buffer1 + 8,strlen(buffer1) - 9);
-			// 读取默认网关 
+			// 锟斤拷取默锟斤拷锟斤拷锟斤拷 
 			fgets(buffer1,100,fp1);
 			strncat(cmdline2,buffer1 + 8,strlen(buffer1) - 9);
 		}
-		system(cmdline1);  // 修改IP地址和子网掩码 
-		system(cmdline2);  // 修改默认网关 
+		system(cmdline1);  // 锟睫革拷IP锟斤拷址锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷 
+		system(cmdline2);  // 锟睫革拷默锟斤拷锟斤拷锟斤拷 
 		fclose(fp1);*/
 	}
 	if (!access("start-eth1",0))
@@ -588,10 +585,10 @@ void Additional(RaidConfig& rc)
 		system("chown root:root resolv.conf");
 		system("mv -f resolv.conf /etc/resolv.conf");
 	}
-	// 关闭或重启监控
+	// 锟截闭伙拷锟斤拷锟斤拷锟斤拷锟斤拷
 	if(!access("reboot_event",0))
 	{
-		// 停止所有正在运行的阵列
+		// 止停锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷
 		for(int i = 0;i < rc.singleRaidNum;i++)
 		{
 			rc.singleRaids[i].stop();
@@ -601,7 +598,7 @@ void Additional(RaidConfig& rc)
 	}
 	if(!access("halt_event",0))
 	{
-		// 停止所有正在运行的阵列
+		// 止停锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟叫碉拷锟斤拷锟斤拷
 		for(int i = 0;i < rc.singleRaidNum;i++)
 		{
 			rc.singleRaids[i].stop();
@@ -669,11 +666,11 @@ void adjustXMLdoc()
 			xmlNewProp(cur,(xmlChar *)"raidcap",(xmlChar *)Stemp);
 		}
 		cur = cur -> next;
-	//FILE * fp1= fopen("test","w");//测试代码
+	//FILE * fp1= fopen("test","w");//锟斤拷锟皆达拷锟斤拷
     //fprintf(fp1,"%s",raidNum);
     //fclose(fp1);
 	}	
-	//写可用设备文件
+	//写锟斤拷锟斤拷锟借备锟侥硷拷
 
 	cur = xmlDocGetRootElement(doc);
 	cur = cur->xmlChildrenNode;
@@ -706,7 +703,7 @@ void adjustXMLdoc()
     fprintf(fp1,"%s",availableDevice);
     fclose(fp1);
 
-	//FILE * fp10= fopen("test","w");//测试代码
+	//FILE * fp10= fopen("test","w");//锟斤拷锟皆达拷锟斤拷
     //fprintf(fp10,"%s","Let US GO");
     //fclose(fp10);
 
@@ -807,7 +804,7 @@ void find_ESSID()
 }
 void decrypt()
 {
-	//查看有没有点击无限网卡
+	//锟介看锟斤拷没锟叫碉拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
 	if(!access("ath0",0))
 	{
 		find_ESSID();
@@ -831,39 +828,39 @@ main()
 {
 	init_daemon();
 	chdir(workingDir);
-	// 建立磁盘数组对象
+	// 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
 	DiskArray da;
 	da.fillArray();
 	printDaToFile("da_onstart",da);
-	// 建立阵列配置管理对象
+	// 锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟矫癸拷锟斤拷锟斤拷锟斤拷
 	RaidConfig rc;
-	// 初始化raidStat数组
+	// 锟斤拷始锟斤拷raidStat锟斤拷锟斤拷
 	for(int i = 0;i < 32;i++)
 		raidStat[i] = -1;
 	sleep(5);
-	if(access("raidConfigt.xml",0))  // 如果以前的xml配置文件不存在
+	if(access("raidConfigt.xml",0))  // 锟斤拷锟斤拷锟斤拷前锟斤拷xml锟斤拷锟斤拷锟侥硷拷锟斤拷锟斤拷锟斤拷
 	{
 		for(int i = 0;i < da.diskNum;i++)
 		{
-			// 将磁盘对象信息加入配置管理对象rc中
+			// 锟斤拷锟斤拷锟教讹拷锟斤拷锟斤拷息锟斤拷锟斤拷锟斤拷锟矫癸拷锟斤拷锟斤拷锟斤拷rc锟斤拷
 			rc.addDisk(da.array[i]);
 		}
-		// 生成xml配置文件raidConfig.xml
+		// 锟斤拷锟斤拷xml锟斤拷锟斤拷锟侥硷拷raidConfig.xml
 		rc.saveRcToXml("raidConfigt.xml");
 	}
-	else  // 如果已存在xml配置文件
+	else  // 锟斤拷锟斤拷锟窖达拷锟斤拷xml锟斤拷锟斤拷锟侥硷拷
 	{
-		// 通过raidConfig.xml文件填充rc对象
+		// 通锟斤拷raidConfig.xml锟侥硷拷锟斤拷锟斤拷rc锟斤拷锟斤拷
 		rc.buildRcFromXml("raidConfigt.xml");
-		// 启动已经存在的阵列
+		// 锟斤拷锟斤拷锟窖撅拷锟斤拷锟节碉拷锟斤拷锟斤拷
 		for(int i = 0;i < rc.singleRaidNum;i++)
 		{
 			rc.singleRaids[i].start();
 		}
 	}
 	printRcToFile("rc_onstart",rc);
-	// 阵列配置文件raidConfig.xml和阵列配置管理对象rc生成完毕
-	// 下面进入循环体
+	// 锟斤拷锟斤拷锟斤拷锟斤拷锟侥硷拷raidConfig.xml锟斤拷锟斤拷锟斤拷锟斤拷锟矫癸拷锟斤拷锟斤拷锟斤拷rc锟斤拷锟斤拷锟斤拷锟斤拷
+	// 锟斤拷锟斤拷锟斤拷锟斤拷循锟斤拷锟斤拷
 
 	while(1)
 	{
@@ -871,7 +868,7 @@ main()
 		//FILE * fp1= fopen("test","w");
 		//fprintf(fp1,"%d",testtemp);
 		//testtemp++;
-		//fclose(fp1);								//下面产生错误
+		//fclose(fp1);								//锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷
 		adjustXMLdoc();
 		DiskMonitor(da,rc);
 		RaidMonitor(rc);
@@ -882,7 +879,7 @@ main()
 		WriteLog();
 
 
-// 		FILE * fp1= fopen("test","w");//测试代码
+// 		FILE * fp1= fopen("test","w");//锟斤拷锟皆达拷锟斤拷
 // 		fprintf(fp1,"%d",testtemp);
 // 		fclose(fp1);
 
