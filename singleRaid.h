@@ -1,4 +1,4 @@
-#include <iostream.h>
+#include <iostream>
 #include <stdio.h>
 #include <string.h>
 #include "disk.h"
@@ -64,6 +64,11 @@ void SingleRaid::setAttribute(char * i,char * l,char * c,char * m)
 	spareDiskNum = 0;
 	// ÉèÖÃÍ¨µÀºÅ
 	setMappingNo();
+
+	chdir(workingDir); //TEST
+	FILE *fpt = fopen("daemonTest","a"); //TEST
+	fprintf(fpt,"SingleRaid[%s]:||level:%s||raidDiskNum:%s \n",devName, level, raidDiskNum); //TEST
+	fclose(fpt); //TEST
 }
 
 void SingleRaid::addRaidDisk(Disk& d)
@@ -126,7 +131,12 @@ void SingleRaid::create()
 	system("mdadm -Ds >> /etc/mdadm.conf");
 	// Ó³Éä
 	mapping();
+	 
 	
+	chdir(workingDir); //TEST
+	FILE *fpt = fopen("daemonTest","a"); //TEST
+	fprintf(fpt,"CREATE::::SingleRaid[%s]:||level:%s||raidDiskNum:%s \n",devName, level, raidDiskNum); //TEST
+	fclose(fpt); //TEST
 }
 
 void SingleRaid::start()
@@ -152,6 +162,11 @@ void SingleRaid::start()
 	system(cmdline);
 	// Ó³Éä
 	mapping();
+
+	chdir(workingDir); //TEST
+	FILE *fpt = fopen("daemonTest","a"); //TEST
+	fprintf(fpt,"START::::SingleRaid[%s]:||level:%s||raidDiskNum:%s \n",devName, level, raidDiskNum); //TEST
+	fclose(fpt); //TEST
 }
 
 void SingleRaid::stop()
@@ -162,6 +177,11 @@ void SingleRaid::stop()
 	strcpy(cmdline,"mdadm -S ");
 	strcat(cmdline,devName);
 	system(cmdline);
+	chdir(workingDir); //TEST
+
+	FILE *fpt = fopen("daemonTest","a"); //TEST
+	fprintf(fpt,"STOP::::SingleRaid[%s]:||level:%s||raidDiskNum:%s \n",devName, level, raidDiskNum); //TEST
+	fclose(fpt); //TEST
 }
 
 void SingleRaid::hotAddDisk(Disk& d)
@@ -281,6 +301,11 @@ void SingleRaid::mapping()
 
 		}
 	}
+
+	chdir(workingDir); //TEST
+	FILE *fpt = fopen("daemonTest","a"); //TEST
+	fprintf(fpt,"MAPPING:::SingleRaid[%s]:||level:%s||raidDiskNum:%s \n",devName, level, raidDiskNum); //TEST
+	fclose(fpt); //TEST
 }
 
 void SingleRaid::unmapping()
@@ -305,6 +330,11 @@ void SingleRaid::unmapping()
 	strcat(cmdline,devName);
 	strcat(cmdline,"\" > /proc/scsi_tgt/disk_fileio/disk_fileio");
 	system(cmdline);
+
+	chdir(workingDir); //TEST
+	FILE *fpt = fopen("daemonTest","a"); //TEST
+	fprintf(fpt,"UNMAPPING::::SingleRaid[%s]:||level:%s||raidDiskNum:%s \n",devName, level, raidDiskNum); //TEST
+	fclose(fpt); //TEST
 }
 
 void SingleRaid::encrypt()

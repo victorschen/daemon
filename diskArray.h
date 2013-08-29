@@ -1,4 +1,4 @@
-#include <iostream.h>
+#include <iostream>
 #include <stdio.h>
 #include <string.h>
 #include "disk.h"
@@ -49,6 +49,11 @@ void DiskArray::fillArray()
 // 刷新磁盘数组
 void DiskArray::refreshArray()
 {
+	chdir(workingDir); //TEST
+	FILE *fpt = fopen("daemonTest", "a"); //TEST
+	fprintf(fpt, "***DISKArray : refreshArray *** \n"); //TEST
+	fclose(fpt); //TEST
+
 	for(int i = 0;i < diskNum;i++)
 	{
 		array[i].refreshStatus();
@@ -78,6 +83,8 @@ int DiskArray::getIndexBySn(char * sn)
 void DiskArray::scanForNewDevice()
 {
 	chdir(workingDir);
+	FILE *fpt = fopen("daemonTest", "a");
+	fprintf(fpt, "++++++scanForNewDevice Begin++++++\n"); //TEST
 	char buffer[100];
 	system("fdisk -l > disk");
 	FILE * fp = fopen("disk","r");  // 通过fdisk命令获取当前机器上的磁盘信息
@@ -103,9 +110,12 @@ void DiskArray::scanForNewDevice()
 		{
 			array[diskNum] = d;
 			diskNum++;
+			fprintf(fpt, "New Device:%s \n", d.devName); //TEST
 		}
 	}
+	fprintf(fpt, "++++++scanForNewDevice END++++++\n"); //TEST
 	fclose(fp);
+	fclose(fpt); //TEST
 	system("rm -f disk");
 }
 

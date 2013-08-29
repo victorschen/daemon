@@ -1,5 +1,6 @@
-#include <iostream.h>
+#include <iostream>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include<unistd.h>
 #include<signal.h>
@@ -36,27 +37,8 @@ void init_daemon(void)
 	return;
 }
 
-void save_xml()
-{
-	if(!access("save-xml",0))
-	{
-		system("cp -f raidConfigt.xml /mnt/config");
-		if(!access("/etc/mdadm.conf",0))
-		{
-			system("cp -f /etc/mdadm.conf /mnt/config/mdadm.conf");
-			system("rm -f /etc/mdadm.conf");
-		}
-		else
-		{
-			system("rm -f /mnt/config/mdadm.conf");
-		}
-		system("rm -f save-xml");
-	}
-}
-
 void printRcToFile(char * fileName,RaidConfig& rc)
 {
-	chdir(workingDir);
 	FILE * fp = fopen(fileName,"w");
 	fputs("*******************************\n",fp);
 	for(int i = 0;i < rc.diskNum;i++)
@@ -80,40 +62,25 @@ void printRcToFile(char * fileName,RaidConfig& rc)
 	fclose(fp);
 }
 
-void printDaToFile(char * fileName,DiskArray& da)
-{
-	chdir(workingDir);
-	FILE * fp = fopen(fileName,"w");
-	fputs("***********  DA_START  *************\n",fp);
-	for(int i = 0;i < da.diskNum;i++)
-	{
-		fprintf(fp,"DISK: %s | %s\n",da.array[i].devName,da.array[i].sn);
-	}
-	fputs("************  DA_END  **************\n",fp);
-	fclose(fp);
-}
-
 // 磁盘监控模块
 void DiskMonitor(DiskArray& da,RaidConfig& rc)
 {
 	// 首先刷新da中的磁盘状态
 	chdir(workingDir);
 	da.refreshArray();
-	da.scanForNewDevice();  // 扫描新插入的磁盘
 	for(int i = 0;i < da.diskNum;i++)
 	{
 		int isNewDisk = 1;  // 标志磁盘是否为新设备
 		// 将磁盘与非阵列下的磁盘对比
 		for(int j = 0;j < rc.diskNum;j++)
 		{
-			if(da.array[i] == rc.disks[j])
+			if(!strcmp(da.array[i].sn,rc.disks[j].sn))
 			{
 				strcpy(rc.disks[j].status,da.array[i].status);
 				isNewDisk = 0;
 				// 如果有磁盘状态不正常时的处理
-				if(!strcmp(rc.disks[j].status,"2"))
+				if(strcmp(rc.disks[j].status,"0"))
 				{
-					da.removeDiskAt(i);  // 将坏的磁盘从da对象中移出
 					FILE * fp = fopen("broken_disk_evulsion_event","w");
 					fclose(fp);
 				}
@@ -126,12 +93,12 @@ void DiskMonitor(DiskArray& da,RaidConfig& rc)
 			// 对比阵列盘组
 			for(int k = 0;k < rc.singleRaids[j].raidDiskNum;k++)
 			{
-				if(da.array[i] == rc.singleRaids[j].raidDisks[k])
+				if(!strcmp(da.array[i].sn,rc.singleRaids[j].raidDisks[k].sn))
 				{
 					strcpy(rc.singleRaids[j].raidDisks[k].status,da.array[i].status);
 					isNewDisk = 0;
 					// 如果磁盘状态不正常时的处理
-					if(!strcmp(rc.singleRaids[j].raidDisks[k].status,"2"))
+					if(strcmp(rc.singleRaids[j].raidDisks[k].status,"0"))
 					{
 						FILE * fp = fopen("broken_disk_evulsion_event","w");
 						fclose(fp);
@@ -142,12 +109,12 @@ void DiskMonitor(DiskArray& da,RaidConfig& rc)
 			// 对比备份盘组
 			for(int k = 0;k < rc.singleRaids[j].spareDiskNum;k++)
 			{
-				if(rc.singleRaids[j].spareDisks[k] == da.array[i])
+				if(!strcmp(rc.singleRaids[j].spareDisks[k].sn,da.array[i].sn))
 				{
 					strcpy(rc.singleRaids[j].spareDisks[k].status,da.array[i].status);
 					isNewDisk = 0;
 					// 如果磁盘状态不正常时的处理
-					if(!strcmp(rc.singleRaids[j].spareDisks[k].status,"2"))
+					if(strcmp(rc.singleRaids[j].spareDisks[k].status,"0"))
 					{
 						FILE * fp = fopen("broken_disk_evulsion_event","w");
 						fclose(fp);
@@ -166,9 +133,9 @@ void DiskMonitor(DiskArray& da,RaidConfig& rc)
 		}
 	}
 	// 重新生成xml文件
-	if(!access("raidConfigt.xml",0))
-		system("rm -f raidConfigt.xml");
-	rc.saveRcToXml("raidConfigt.xml");
+	if(!access("raidConfig.xml",0))
+		system("rm -f raidConfig.xml");
+	rc.saveRcToXml("raidConfig.xml");
 }
 
 // 阵列配置更新模块
@@ -185,8 +152,14 @@ void RaidMonitor(RaidConfig& rc)
 	    {
 	    	if(rc.getSingleRaidIndex(rc1.singleRaids[i]) == -1)
 	    	{
+			FILE *fpt = fopen("daemonTest", "a"); //TEST
+			fprintf(fpt,"====rc will add single raid===\n ====rc1 will create raid===="); //TEST
+			
 	    		rc.addSingleRaid(rc1.singleRaids[i]);
 	    		rc1.singleRaids[i].create();
+
+			fprintf(fpt,"addSingleRaid[%s]:", rc.singleRaids[i].devName); //TEST
+			fclose(fpt); //TEST
 	    	}
 	    }
 		// 判断是否有阵列被删除
@@ -264,11 +237,10 @@ void RaidMonitor(RaidConfig& rc)
 		}
 		// 重新生成xml文件
 		system("rm -f raidConfigNew.xml");
-		if(!access("raidConfigt.xml",0))
-			system("rm -f raidConfigt.xml");
+		if(!access("raidConfig.xml",0))
+			system("rm -f raidConfig.xml");
 		printRcToFile("rc",rc);
-		rc.saveRcToXml("raidConfigt.xml");
-		save_xml();
+		rc.saveRcToXml("raidConfig.xml");
 	}
 }
 
@@ -381,15 +353,14 @@ void WriteLog()
 	/* 查看/proc/mdstat文件，监控磁盘阵列的运行状态 */
 	system("mv log log1");
 	fp1 = fopen("log","w");  /* 创建一个新的日志文件 */
-	//fp3 = fopen("/proc/raidstat","r");
-	fp3 = fopen("/proc/mdstat","r");
+	fp3 = fopen("/proc/raidstat","r");
 	nLines = 0;
-	while(fgets(buffer3,100,fp3) != NULL)                                                                 //问题所在
+	while(fgets(buffer3,100,fp3) != NULL)
 	{
-		if(strncmp(buffer3,"md",2))  /* 找到记录md信息的起始行 */
+		if(strncmp(buffer3,"raid",4))  /* 找到记录md信息的起始行 */
 			continue;
-		i = atoi(buffer3 + 2);  /* i为阵列的序号 */
-		if(strstr(buffer3 + 13,"raid0") != NULL)  /* 如果阵列是raid0级别 */
+		i = atoi(buffer3 + 4);  /* i为阵列的序号 */
+		if(strstr(buffer3 + 1,"raid0") != NULL)  /* 如果阵列是raid0级别 */
 		{
 			if(strstr(buffer3,"(F)") != NULL)  /* raid0阵列中有磁盘损坏 */
 			{
@@ -403,7 +374,7 @@ void WriteLog()
 					fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 					fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
 					strcpy(buffer1,"RAIDSTATUS|阵列");
-					strncat(buffer1,buffer3 + 2,2);  // 加上阵列的序号
+					strncat(buffer1,buffer3 + 4,2);  // 加上阵列的序号
 					strcat(buffer1,":有磁盘损坏或拔出，raid0阵列被损坏\n");
 					fputs(buffer1,fp1);
 					nLines ++;
@@ -422,7 +393,7 @@ void WriteLog()
 					fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 					fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
 					strcpy(buffer1,"RAIDSTATUS|阵列");
-					strncat(buffer1,buffer3 + 2,2);   // 加上阵列的序号
+					strncat(buffer1,buffer3 + 4,2);   // 加上阵列的序号
 					strcat(buffer1,":状态正常\n");
 					fputs(buffer1,fp1);
 					nLines ++;
@@ -450,7 +421,7 @@ void WriteLog()
 					fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 					fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
 					strcpy(buffer1,"RAIDSTATUS|阵列");
-					strncat(buffer1,temp + 2,2);  // 加上阵列的序号
+					strncat(buffer1,temp + 4,2);  // 加上阵列的序号
 					strcat(buffer1,":正在重建 进度:");
 					strncat(buffer1,strstr(buffer3,"recovery = ") + 11,5);
 					strcat(buffer1," 剩余时间:");
@@ -472,7 +443,7 @@ void WriteLog()
 						fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 						fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
 						strcpy(buffer1,"RAIDSTATUS|阵列");
-						strncat(buffer1,temp + 2,2);  // 加上阵列的序号
+						strncat(buffer1,temp + 4,2);  // 加上阵列的序号
 						strcat(buffer1,":处于降级模式\n");
 						fputs(buffer1,fp1);
 						nLines ++;
@@ -496,7 +467,7 @@ void WriteLog()
 					fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 					fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
 					strcpy(buffer1,"RAIDSTATUS|阵列");
-					strncat(buffer1,temp + 2,2);  // 加上阵列的序号
+					strncat(buffer1,temp + 4,2);  // 加上阵列的序号
 					strcat(buffer1,":正在同步 进度:");
 					strncat(buffer1,strstr(buffer3,"resync = ") + 9,5);
 					strcat(buffer1," 剩余时间:");
@@ -518,7 +489,7 @@ void WriteLog()
 						fprintf(fp1,"%d-%d-%d|",(1900 + p->tm_year),(1 + p->tm_mon),(p->tm_mday));
 						fprintf(fp1,"%d:%02d:%02d|",p->tm_hour,p->tm_min,p->tm_sec);
 						strcpy(buffer1,"RAIDSTATUS|阵列");
-						strncat(buffer1,temp + 2,2);  // 加上阵列的序号
+						strncat(buffer1,temp + 4,2);  // 加上阵列的序号
 						strcat(buffer1,":处于正常状态\n");
 						fputs(buffer1,fp1);
 						nLines ++;
@@ -548,14 +519,12 @@ void WriteLog()
 void Additional(RaidConfig& rc)
 {
 	FILE * fp1;
-	char buffer1[100],cmdline1[200],cmdline2[200];
+	char buffer1[100],cmdline1[100],cmdline2[100];
 	chdir(workingDir);
 	// 修改网络IP地址和DNS
-	if(!access("modify-eth",0))
+	if(!access("ifcfg-eth0",0))
 	{
-		system("/home/hustraid-init ifg-eth");
-
-		/*system("chown root:root ifcfg-eth0");
+		system("chown root:root ifcfg-eth0");
 		system("mv -f ifcfg-eth0 /etc/sysconfig/network-scripts/ifcfg-eth0");
 		fp1 = fopen("/etc/sysconfig/network-scripts/ifcfg-eth0","r");
 		strcpy(cmdline1,"ifconfig eth0 ");
@@ -564,21 +533,17 @@ void Additional(RaidConfig& rc)
 		{
 			if(strncmp(buffer1,"IPADDR",6))
 				continue;
-			strncat(cmdline1,buffer1 + 7,strlen(buffer1) - 8);  // 读取IP地址 
+			strncat(cmdline1,buffer1 + 7,strlen(buffer1) - 8);  /* 读取IP地址 */
 			strcat(cmdline1," netmask ");
-			fgets(buffer1,100,fp1);  // 读取子网掩码 
+			fgets(buffer1,100,fp1);  /* 读取子网掩码 */
 			strncat(cmdline1,buffer1 + 8,strlen(buffer1) - 9);
-			// 读取默认网关 
+			/* 读取默认网关 */
 			fgets(buffer1,100,fp1);
 			strncat(cmdline2,buffer1 + 8,strlen(buffer1) - 9);
 		}
-		system(cmdline1);  // 修改IP地址和子网掩码 
-		system(cmdline2);  // 修改默认网关 
-		fclose(fp1);*/
-	}
-	if (!access("start-eth1",0))
-	{
-		system("/home/hustraid-init start-eth1");
+		system(cmdline1);  /* 修改IP地址和子网掩码 */
+		system(cmdline2);  /* 修改默认网关 */
+		fclose(fp1);
 	}
 	if(!access("resolv.conf",0))
 	{
@@ -607,222 +572,6 @@ void Additional(RaidConfig& rc)
 		system("poweroff");
 	}
 }
-void adjustXMLdoc()
-{
-	float raidcap = 0.00;
-	char *Ctemp;
-	char CCtmp[22];
-	char Stemp[20];
-	unsigned int Clen;
-	char *typetemp;
-	char *disknum;
-	int raidDiskNum;
-	int type;
-	char availableDevice[300] = "availableDevice: ";
-	char *temp;
-	char cmd[60] = "/root/scst-map.sh "; 
-	char cmd2[60] = "/root/encrypt.sh ";
-	if(access("raidConfigt.xml",0))
-		return ;
-	xmlDocPtr doc = xmlParseFile("raidConfigt.xml");
-	xmlNodePtr cur = xmlDocGetRootElement(doc);
-	char *raidNum = (char *)xmlGetProp(cur,(xmlChar *)"raidNum");
-	if(raidNum=="0")
-		return ;
-	cur = cur->xmlChildrenNode;
-	while(cur != NULL)
-	{
-
-		if(!xmlStrcmp(cur->name,(const xmlChar *)"singleRaid"))
-		{
-			typetemp = (char *)xmlGetProp(cur,(xmlChar *)"level");
-			type = atoi(typetemp);
-			disknum = (char *)xmlGetProp(cur,(xmlChar *)"raidDiskNum");
-			raidDiskNum = atoi(disknum);
-			xmlNodePtr childCur = cur -> xmlChildrenNode;
-			Ctemp = (char *)xmlGetProp(childCur,(xmlChar *)"capacity");
-			Clen = strlen(Ctemp);
-			memcpy(Stemp,Ctemp,Clen-3);
-			Stemp[Clen-3]='\0';
-			raidcap = atof(Stemp);
-			switch (type)
-			{
-			case 0:	raidcap = raidcap*raidDiskNum;
-						break;
-			case 1:	raidcap = raidcap*(raidDiskNum/2);
-				break;
-			case 4:	raidcap = raidcap*(raidDiskNum-1);
-				break;
-			case 5:	raidcap = raidcap*(raidDiskNum-1);
-				break;
-			case 6:	raidcap = raidcap*(raidDiskNum-2);
-				break;
-			case 10: raidcap = raidcap*(raidDiskNum/2); 
-				break;
-			default :	break;
-			}
-			sprintf(Stemp,"%.2f",raidcap);
-			strcat(Stemp,"GB");
-			xmlNewProp(cur,(xmlChar *)"raidcap",(xmlChar *)Stemp);
-		}
-		cur = cur -> next;
-	//FILE * fp1= fopen("test","w");//测试代码
-    //fprintf(fp1,"%s",raidNum);
-    //fclose(fp1);
-	}	
-	//写可用设备文件
-
-	cur = xmlDocGetRootElement(doc);
-	cur = cur->xmlChildrenNode;
-	while (cur != NULL)
-	{
-		if(!xmlStrcmp(cur->name,(const xmlChar *)"Disk"))
-		{
-			temp = (char *)xmlGetProp(cur,(xmlChar *)"devName");
-			strcat(availableDevice,temp);
-			strcat(availableDevice," ");
-			
-		}
-		if(!xmlStrcmp(cur->name,(const xmlChar *)"singleRaid"))
-		{
-			temp = (char *)xmlGetProp(cur,(xmlChar *)"devName");
-			strcat(availableDevice,temp);
-			strcat(availableDevice," ");
-		}	
-	cur = cur->next;
-	}
-	
-	xmlSaveFormatFile("raidConfig.xml",doc,1);
-	xmlFreeDoc(doc);
-
-
-
-	if (!strlen(availableDevice))
-		return ;
-	FILE * fp1= fopen("availableDevice","w");
-    fprintf(fp1,"%s",availableDevice);
-    fclose(fp1);
-
-	//FILE * fp10= fopen("test","w");//测试代码
-    //fprintf(fp10,"%s","Let US GO");
-    //fclose(fp10);
-
-	FILE * fp2= fopen("selecteddevice","r");
-	
-	if (fp2 == NULL)
-	{
-		if (fopen("usingdevice","r")==NULL)
-		{
-			return;
-		}
-		else
-		{
-			FILE * fp3= fopen("Encrypt","r");
-			if (fp3 == NULL)
-			{
-				return;
-			}
-			else
-			{
-				getline(&Ctemp,&Clen,fp3);
-				Clen=strlen(Ctemp);
-				*(Ctemp+Clen-2)='\0';
-				getline(&temp,&Clen,fp3);
-				strcat(cmd2,Ctemp);
-				strcat(cmd2," ");
-				strcat(cmd2,temp);
-				system(cmd2);
-				fclose(fp3);
-				system("rm -f Encrypt");
-				
-			}
-		}
-	}
-	else
-	{
-		fgets(CCtmp,20,fp2);
-		strcat(cmd,CCtmp);
-		strcat(cmd," HUSTRAID");
-		system(cmd);
-		sleep(4);
-		system("/root/iscsi.sh start");
-		fclose(fp2);
-		system("rm -f selecteddevice");
-		FILE * fp5 = fopen("usingdevice","w");
-		fprintf(fp5,"%s",CCtmp);
-		fclose(fp5);
-	}
-
-}
-void disconnectDevice()
-{
-	FILE * fp1 = fopen("disconnectDevice","r");
-	char temp[20];
-	char cmd[60]="/root/scst-unmap.sh ";
-	if (fp1 == NULL)
-	{
-		return ;
-	}
-	else
-	{
-		fgets(temp,20,fp1);
-		strcat(cmd,temp);
-		strcat(cmd," HUSTRAID");
-		system(cmd);
-		sleep(4);
-		system("/root/iscsi.sh stop");
-		fclose(fp1);
-		system("rm -f disconnectDevice");
-		system("rm -f usingdevice");
-	}
-}
-
-
-void find_ESSID()
-{
-	char buffer1[100],buffer2[100];
-	memset(buffer2,0,sizeof(buffer2));
-	system("iwlist ath0 scan | grep ESSID > /usr/htdocs/RaidManager/Monitor/ESSID");
-	sleep(3);
-	FILE * fp1 = fopen("ESSID","r");
-	FILE * fp2 = fopen("wireless","w");
-	if (fp1 == NULL || fp2 == NULL)
-	{
-		return ;
-	}
-	while (fgets(buffer1,100,fp1) != NULL)
-	{
-		strncat(buffer2,buffer1+27,strlen(buffer1)-29);
-		fprintf(fp2,"%s",buffer2);
-		fprintf(fp2,"%s","\n");
-		memset(buffer2,0,sizeof(buffer2));
-	}
-	fclose(fp1);
-	fclose(fp2);
-	system("rm -f ESSID");
-	system("rm -f ath0");
-}
-void decrypt()
-{
-	//查看有没有点击无限网卡
-	if(!access("ath0",0))
-	{
-		find_ESSID();
-	}
-
-	FILE * fp1= fopen("decrypt","r");
-	if (fp1 == NULL)
-	{
-		return ;
-	}
-	else
-	{
-		fclose(fp1);
-		system("echo \"clear\" >/proc/scsi_tgt/vdisk/security");
-		system("rm -f decrypt");
-	}
-}
-
 
 main()
 {
@@ -831,14 +580,12 @@ main()
 	// 建立磁盘数组对象
 	DiskArray da;
 	da.fillArray();
-	printDaToFile("da_onstart",da);
 	// 建立阵列配置管理对象
 	RaidConfig rc;
 	// 初始化raidStat数组
 	for(int i = 0;i < 32;i++)
 		raidStat[i] = -1;
-	sleep(5);
-	if(access("raidConfigt.xml",0))  // 如果以前的xml配置文件不存在
+	if(access("raidConfig.xml",0))  // 如果以前的xml配置文件不存在
 	{
 		for(int i = 0;i < da.diskNum;i++)
 		{
@@ -846,49 +593,26 @@ main()
 			rc.addDisk(da.array[i]);
 		}
 		// 生成xml配置文件raidConfig.xml
-		rc.saveRcToXml("raidConfigt.xml");
+		rc.saveRcToXml("raidConfig.xml");
 	}
 	else  // 如果已存在xml配置文件
 	{
 		// 通过raidConfig.xml文件填充rc对象
-		rc.buildRcFromXml("raidConfigt.xml");
+		rc.buildRcFromXml("raidConfig.xml");
 		// 启动已经存在的阵列
 		for(int i = 0;i < rc.singleRaidNum;i++)
 		{
 			rc.singleRaids[i].start();
 		}
 	}
-	printRcToFile("rc_onstart",rc);
 	// 阵列配置文件raidConfig.xml和阵列配置管理对象rc生成完毕
 	// 下面进入循环体
-
 	while(1)
 	{
-		
-		//FILE * fp1= fopen("test","w");
-		//fprintf(fp1,"%d",testtemp);
-		//testtemp++;
-		//fclose(fp1);								//下面产生错误
-		adjustXMLdoc();
 		DiskMonitor(da,rc);
 		RaidMonitor(rc);
-		decrypt();
-		//wireless();
-		disconnectDevice();
-		adjustXMLdoc();
 		WriteLog();
-
-
-// 		FILE * fp1= fopen("test","w");//测试代码
-// 		fprintf(fp1,"%d",testtemp);
-// 		fclose(fp1);
-
-
 		Additional(rc);
-		adjustXMLdoc();
-		//wireless();
-		decrypt();
-		disconnectDevice();
 		sleep(10);
 	}
 }

@@ -1,4 +1,4 @@
-#include <iostream.h>
+#include <iostream>
 #include <stdio.h>
 #include <string.h>
 #include "global.h"
@@ -51,6 +51,12 @@ void Disk::setAttribute(char * device)
 	getSnByDevName();
 	getVenByDevName();
 	getCapByDevName();
+
+	chdir(workingDir); //TEST
+	FILE *fpt = fopen("daemonTest", "a"); //TEST
+	fprintf(fpt,"Disk %s setAttribute||SN: %s ||Cap: %s ||Vendor: %s ||status: %s \n", devName, sn, capacity, vendor, status); //TEST
+	fclose(fpt); //TEST
+
 }
 
 bool Disk::getSnByDevName()
@@ -150,6 +156,11 @@ bool Disk::getCapByDevName()
 
 bool Disk::refreshStatus()
 {
+	chdir(workingDir); //TEST
+	FILE *fpt = fopen("daemonTest","a"); //TEST
+	fprintf(fpt,"===refreshStatus DISK %s: refreshStatus=== \n",devName); //TEST
+	fclose(fpt); //TEST
+
 	chdir(workingDir);
 	char buffer[100];
 	// ≥¢ ‘ π”√sg_inq√¸¡Ó¿¥∫À∂‘¥≈≈Ã–Ú¡–∫≈
